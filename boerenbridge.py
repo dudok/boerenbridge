@@ -23,13 +23,10 @@ class Card:
         t2 = other.rank, other.suit
         return t1 < t2
     
-    def has_lead_suit(self, lead_suit):
-        return self.suit == lead_suit
+    def has_suit(self, suit):
+        return self.suit == suit
     
-    def is_trump(self, trump_suit):
-        return self.suit == trump_suit
-
-
+   
 class Deck:
     """Represents a deck of 52 playing cards. Cards can be moved to or
     from a deck. The deck can also be shuffled or sorted."""
@@ -76,7 +73,7 @@ class Hand(Deck):
     
     def __init__(self, label):
         """lists to group the cards in the hand. Lists are re-used.
-        self.label is the label of the player(int).
+        self.label (int) is the label of the player  the hand belongs to.
         """ 
         self.label = label
         self.cards = []
@@ -135,13 +132,13 @@ class Trick(Deck):
         return self.cards[-1]          
     
     def sort(self):
-        """Sorting is done in three steps: sorting based on the __lt__ method
-        of the cards (first rank, then suit), if they have the lead suit
-        and if they have the trump suit.
+        """Sorting is done in three steps: (1)based on the __lt__ method
+        of the cards (first rank, then suit), (2)if they have the lead suit
+        and (3)if they have the trump suit.
         """
         self.cards.sort()
-        self.cards.sort(key=lambda x: x.has_lead_suit(self.lead_suit))
-        self.cards.sort(key=lambda x: x.is_trump(self.trump_suit))
+        self.cards.sort(key=lambda x: x.has_suit(self.lead_suit))
+        self.cards.sort(key=lambda x: x.has_suit(self.trump_suit))
    
     
 class Player:
@@ -150,7 +147,7 @@ class Player:
     
     def __init__(self, label, name=''):
         """The label is an integer in the range(4) so the player can be
-        identified. In fact all labels being used in the game stand for a
+        identified. In fact all labels being used in the game correspond to a
         certain player. A player has a hand and can have a card it played.
         The difference between their bids and their actual wins of tricks
         decides the score.
@@ -164,24 +161,32 @@ class Player:
         self.score = 0
 
     def start(self, lead_suit, trump_suit):
-        
+        """The player starts to play, from here on there is communication
+        to the views and controllers of the game via events, work in progress.
+        for now, to check if the model works, players play a random playable card.
+        """
         playable = self.hand.playable_cards(lead_suit, trump_suit)
         unplayable = self.hand.unplayable_cards()
-        self.played_card = playable[0]
+        self.played_card = random.choice(playable)
         self.played_card.label = self.label
+        
         for card in playable:
             print(str(card) + ' playable')
         for card in unplayable:
             print(str(card) + ' unplayable')
-        print('\n')
-    
+        print('\n{} played\n'.format(self.played_card))
+       
             
 class Score:
     """Represents the score of each player."""
+    
     def __init__(self, players):
         self.players = players
         
     def adjust(self):
+        """Scores are adjusted based on the difference between the player's
+        biddings and their actual trick wins.
+        """
         for player in self.players:
             if player.tricks_won == player.bids:
                 player.score += player.tricks_won*2 + 5
@@ -218,20 +223,22 @@ class Game:
         self.trick.move_cards(self.deck, Game.nop)
         return ranked[-1][0] 
     
+    def next_player(self, label):
+        """Returns the next player given the label of the last
+        player. Sets the label of the trick accordingly.
+        """
+        player = self.players[label - (self.nop - 1)]
+        self.trick.label = player.label
+        return player
+        
     def starting_player(self):
-        """Sets the leading player at the start of every round. It is 
+        """The leading player at the start of every round. It is 
         the player after the dealer. The starting position rotates clockwise. 
         Sets the label of the game accordingly.
         """ 
         player = self.next_player(self.label)
         self.label = player.label
-        
-    def deal_hands(self):
-        """Deals a number of cards from the deck to all hands in the game.
-        """
-        for player in self.players:
-            self.deck.move_cards(player.hand, self.noc[self.round - 1])
-            
+    
     def pull_trump(self):
         """Every even round there is a random trump suit. 
         Cards with trump suit can always be played and are highest.
@@ -241,16 +248,14 @@ class Game:
             self.deck.shuffle()
         else: self.trick.trump_suit = None
         if self.trick.trump_suit:
-            print('trump is' + Card.suit_names[self.trick.trump_suit])
-     
-    def next_player(self, label):
-        """Returns the next player given the label of the last
-        player. Sets the label of the trick accordingly.
+            print('trump is' + Card.suit_names[self.trick.trump_suit])    
+    
+    def deal_hands(self):
+        """Deals a number of cards from the deck to all hands in the game.
         """
-        player = self.players[label - (self.nop - 1)]
-        self.trick.label = player.label
-        return player
-        
+        for player in self.players:
+            self.deck.move_cards(player.hand, self.noc[self.round - 1])
+            
     def leading_player(self):
         """Determines the next leading player at the end of a trick. 
         Sets the label of the trick accordingly.

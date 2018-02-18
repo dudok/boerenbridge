@@ -289,7 +289,7 @@ class Game:
         """The main loop of the game model, each loop is a round in the game. 
         """
         while self.round <= len(self.noc):
-             
+             print('\nround ' + str(self.round))
              self.starting_player()
              self.deck.shuffle()
              self.pull_trump()
